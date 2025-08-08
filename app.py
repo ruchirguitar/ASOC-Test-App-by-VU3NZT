@@ -6,7 +6,7 @@ from pathlib import Path
 
 st.set_page_config(page_title="GIAR ASOC Mock Test", layout="wide")
 
-# ---- HEADER WITH LOGO AND CREDITS ----
+# ---- HEADER ----
 logo_path = "logo_color_new_small.png"
 col1, col2 = st.columns([1, 5])
 with col1:
@@ -17,7 +17,7 @@ with col2:
 
 st.markdown("---")
 
-# ---- LOAD QUESTION BANKS ----
+# ---- LOAD DATA ----
 sectionA_file = Path("sectionA_1000.xlsx")
 sectionB_file = Path("sectionB_1000.xlsx")
 
@@ -30,43 +30,24 @@ if "answers" not in st.session_state:
 if "seed" not in st.session_state:
     st.session_state.seed = random.randint(1, 10**9)
 
-# ---- SELECT GRADE ----
-grade = st.selectbox(
-    "Select Grade",
-    ["Restricted (25 A + 25 B)", "General (50 A + 50 B)"]
-)
+# ---- GRADE SELECTION ----
+grade = st.selectbox("Select Grade", ["Restricted (25 A + 25 B)", "General (50 A + 50 B)"])
 if "Restricted" in grade:
     nA, nB = 25, 25
 else:
     nA, nB = 50, 50
 
-# ---- RANDOM SELECTION ----
+# ---- RANDOM QUESTIONS ----
 seed = st.session_state.seed
 random.seed(seed)
 sampleA = dfA.sample(n=nA, random_state=seed).reset_index(drop=True)
 sampleB = dfB.sample(n=nB, random_state=seed+1).reset_index(drop=True)
 
-st.info("Exam layout: Section A (Radio Theory) on the left, Section B (Radio Regulations) on the right.")
-
-# ---- Store correct answers and shuffled options ----
+# ---- MAPPINGS ----
 correct_answers_map = {}
 options_map = {}
 
-# ---- CHEAT MODE BUTTON ----
-if st.button("💡 Cheat Mode (Fill All Correct Answers)"):
-    for i, row in sampleA.iterrows():
-        qkey = f"A{i+1}"
-        opts = [
-            ("A", row['OptionA']),
-            ("B", row['OptionB']),
-            ("C", row['OptionC']),
-            ("D", row['OptionD'])
-        ]
-        random.shuffle(opts)
-    for qkey in options_map:
-        correct_idx = correct_answers_map[qkey]
-        st.session_state.answers[qkey] = options_map[qkey][correct_idx]
-    st.experimental_rerun()
+st.info("Exam layout: Section A (Radio Theory) on the left, Section B (Radio Regulations) on the right.")
 
 # ---- FORM ----
 with st.form("exam_form"):
@@ -78,7 +59,6 @@ with st.form("exam_form"):
             qkey = f"A{i+1}"
             st.markdown(f"**A{i+1}. {row['Question']}**")
 
-            # Shuffle options
             opts = [
                 ("A", row['OptionA']),
                 ("B", row['OptionB']),
@@ -87,7 +67,6 @@ with st.form("exam_form"):
             ]
             random.shuffle(opts)
 
-            # Correct answer mapping
             for new_label, opt_text in opts:
                 if new_label == row['Answer']:
                     correct_answers_map[qkey] = opts.index((new_label, opt_text))
@@ -139,6 +118,13 @@ with st.form("exam_form"):
             )
             st.session_state.answers[qkey] = choice
             st.markdown("&nbsp;", unsafe_allow_html=True)
+
+    # ---- CHEAT MODE INSIDE FORM ----
+    if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
+        for qkey in options_map:
+            correct_idx = correct_answers_map[qkey]
+            st.session_state.answers[qkey] = options_map[qkey][correct_idx]
+        st.experimental_rerun()
 
     submitted = st.form_submit_button("Submit Exam & Show Results")
 
