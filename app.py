@@ -24,6 +24,12 @@ sectionB_file = Path("sectionB_1000.xlsx")
 dfA = pd.read_excel(sectionA_file)
 dfB = pd.read_excel(sectionB_file)
 
+# ---- SESSION STATE ----
+if "answers" not in st.session_state:
+    st.session_state.answers = {}
+if "seed" not in st.session_state:
+    st.session_state.seed = random.randint(1, 10**9)
+
 # ---- SELECT GRADE ----
 grade = st.selectbox(
     "Select Grade",
@@ -35,22 +41,34 @@ else:
     nA, nB = 50, 50
 
 # ---- RANDOM SELECTION ----
-seed = st.session_state.get("seed", None)
-if seed is None:
-    seed = random.randint(1, 10**9)
-    st.session_state["seed"] = seed
+seed = st.session_state.seed
 random.seed(seed)
-
 sampleA = dfA.sample(n=nA, random_state=seed).reset_index(drop=True)
 sampleB = dfB.sample(n=nB, random_state=seed+1).reset_index(drop=True)
 
 st.info("Exam layout: Section A (Radio Theory) on the left, Section B (Radio Regulations) on the right.")
 
-# Store correct answers and shuffled options
+# ---- Store correct answers and shuffled options ----
 correct_answers_map = {}
 options_map = {}
-answers = {}
 
+# ---- CHEAT MODE BUTTON ----
+if st.button("💡 Cheat Mode (Fill All Correct Answers)"):
+    for i, row in sampleA.iterrows():
+        qkey = f"A{i+1}"
+        opts = [
+            ("A", row['OptionA']),
+            ("B", row['OptionB']),
+            ("C", row['OptionC']),
+            ("D", row['OptionD'])
+        ]
+        random.shuffle(opts)
+    for qkey in options_map:
+        correct_idx = correct_answers_map[qkey]
+        st.session_state.answers[qkey] = options_map[qkey][correct_idx]
+    st.experimental_rerun()
+
+# ---- FORM ----
 with st.form("exam_form"):
     colA, colB = st.columns(2)
 
@@ -60,7 +78,7 @@ with st.form("exam_form"):
             qkey = f"A{i+1}"
             st.markdown(f"**A{i+1}. {row['Question']}**")
 
-            # Prepare options and shuffle
+            # Shuffle options
             opts = [
                 ("A", row['OptionA']),
                 ("B", row['OptionB']),
@@ -69,23 +87,25 @@ with st.form("exam_form"):
             ]
             random.shuffle(opts)
 
-            # Store correct answer index
+            # Correct answer mapping
             for new_label, opt_text in opts:
                 if new_label == row['Answer']:
                     correct_answers_map[qkey] = opts.index((new_label, opt_text))
 
-            # Display options with A) etc.
             display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
-            options_map[qkey] = display_opts  # store shuffled options
+            options_map[qkey] = display_opts
 
-            answers[qkey] = st.radio(
+            answers_val = st.session_state.answers.get(qkey, None)
+            index_val = display_opts.index(answers_val) if answers_val in display_opts else None
+            choice = st.radio(
                 "",
                 display_opts,
                 key=f"A_radio_{i}",
-                index=None if qkey not in answers else display_opts.index(answers[qkey]),
+                index=index_val,
                 label_visibility="collapsed"
             )
-            st.markdown("&nbsp;", unsafe_allow_html=True)  # spacing after options
+            st.session_state.answers[qkey] = choice
+            st.markdown("&nbsp;", unsafe_allow_html=True)
 
     with colB:
         st.header("Section B — Radio Regulations")
@@ -93,7 +113,6 @@ with st.form("exam_form"):
             qkey = f"B{i+1}"
             st.markdown(f"**B{i+1}. {row['Question']}**")
 
-            # Prepare options and shuffle
             opts = [
                 ("A", row['OptionA']),
                 ("B", row['OptionB']),
@@ -102,37 +121,31 @@ with st.form("exam_form"):
             ]
             random.shuffle(opts)
 
-            # Store correct answer index
             for new_label, opt_text in opts:
                 if new_label == row['Answer']:
                     correct_answers_map[qkey] = opts.index((new_label, opt_text))
 
-            # Display options with A) etc.
             display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
-            options_map[qkey] = display_opts  # store shuffled options
+            options_map[qkey] = display_opts
 
-            answers[qkey] = st.radio(
+            answers_val = st.session_state.answers.get(qkey, None)
+            index_val = display_opts.index(answers_val) if answers_val in display_opts else None
+            choice = st.radio(
                 "",
                 display_opts,
                 key=f"B_radio_{i}",
-                index=None if qkey not in answers else display_opts.index(answers[qkey]),
+                index=index_val,
                 label_visibility="collapsed"
             )
+            st.session_state.answers[qkey] = choice
             st.markdown("&nbsp;", unsafe_allow_html=True)
-
-    # ---- CHEAT MODE BUTTON ----
-    if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
-        for qkey in options_map:
-            correct_idx = correct_answers_map[qkey]
-            answers[qkey] = options_map[qkey][correct_idx]
 
     submitted = st.form_submit_button("Submit Exam & Show Results")
 
-# ---- EVALUATE & SHOW RESULTS ----
+# ---- RESULTS ----
 if submitted:
-    # ---- CHECK FOR UNANSWERED ----
-    unanswered_A = [f"A{i+1}" for i in range(len(sampleA)) if answers[f"A{i+1}"] is None]
-    unanswered_B = [f"B{i+1}" for i in range(len(sampleB)) if answers[f"B{i+1}"] is None]
+    unanswered_A = [f"A{i+1}" for i in range(len(sampleA)) if not st.session_state.answers.get(f"A{i+1}")]
+    unanswered_B = [f"B{i+1}" for i in range(len(sampleB)) if not st.session_state.answers.get(f"B{i+1}")]
 
     if unanswered_A or unanswered_B:
         warning_msg = "You have not answered: "
@@ -152,13 +165,13 @@ if submitted:
         st.subheader("Section A Results")
         for i, row in sampleA.iterrows():
             qkey = f"A{i+1}"
-            picked_index = options_map[qkey].index(answers[qkey])
+            picked_index = options_map[qkey].index(st.session_state.answers[qkey])
             is_correct = (picked_index == correct_answers_map[qkey])
             if is_correct:
                 correctA += 1
             st.markdown(
                 f"**A{i+1}.** {row['Question']}  \n"
-                f"Your answer: **{answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"Your answer: **{st.session_state.answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
                 f"**Correct:** {options_map[qkey][correct_answers_map[qkey]]}"
             )
     percA = correctA / len(sampleA) * 100
@@ -168,18 +181,17 @@ if submitted:
         st.subheader("Section B Results")
         for i, row in sampleB.iterrows():
             qkey = f"B{i+1}"
-            picked_index = options_map[qkey].index(answers[qkey])
+            picked_index = options_map[qkey].index(st.session_state.answers[qkey])
             is_correct = (picked_index == correct_answers_map[qkey])
             if is_correct:
                 correctB += 1
             st.markdown(
                 f"**B{i+1}.** {row['Question']}  \n"
-                f"Your answer: **{answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"Your answer: **{st.session_state.answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
                 f"**Correct:** {options_map[qkey][correct_answers_map[qkey]]}"
             )
     percB = correctB / len(sampleB) * 100
 
-    # ---- GRAPHICAL SUMMARY ----
     st.markdown("---")
     st.header("Summary")
 
