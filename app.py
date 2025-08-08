@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import random
@@ -84,7 +83,7 @@ with st.form("exam_form"):
                 label_visibility="collapsed"
             )
             st.session_state.answers[qkey] = choice
-            st.markdown("&nbsp;", unsafe_allow_html=True)
+            st.write("")  # no extra big gap
 
     with colB:
         st.header("Section B — Radio Regulations")
@@ -117,15 +116,13 @@ with st.form("exam_form"):
                 label_visibility="collapsed"
             )
             st.session_state.answers[qkey] = choice
-            st.markdown("&nbsp;", unsafe_allow_html=True)
+            st.write("")
 
-    # ---- CHEAT MODE INSIDE FORM ----
-# ---- CHEAT MODE INSIDE FORM ----
-if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
-    for qkey in options_map:
-        correct_idx = correct_answers_map[qkey]
-        st.session_state.answers[qkey] = options_map[qkey][correct_idx]
-
+    # ---- CHEAT MODE ----
+    if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
+        for qkey in options_map:
+            correct_idx = correct_answers_map[qkey]
+            st.session_state.answers[qkey] = options_map[qkey][correct_idx]
 
     submitted = st.form_submit_button("Submit Exam & Show Results")
 
