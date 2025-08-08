@@ -58,7 +58,7 @@ with st.form("exam_form"):
             st.markdown(f"**A{i+1}. {row['Question']}**")
             answers[qkey] = st.radio(
                 "",
-                (row['OptionA'], row['OptionB'], row['OptionC'], row['OptionD']),
+                (row['Option A'], row['Option B'], row['Option C'], row['Option D']),
                 key=f"A_radio_{i}",
                 index=None
             )
