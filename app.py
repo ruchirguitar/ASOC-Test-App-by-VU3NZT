@@ -120,11 +120,12 @@ with st.form("exam_form"):
             st.markdown("&nbsp;", unsafe_allow_html=True)
 
     # ---- CHEAT MODE INSIDE FORM ----
-    if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
-        for qkey in options_map:
-            correct_idx = correct_answers_map[qkey]
-            st.session_state.answers[qkey] = options_map[qkey][correct_idx]
-        st.rerun()
+# ---- CHEAT MODE INSIDE FORM ----
+if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
+    for qkey in options_map:
+        correct_idx = correct_answers_map[qkey]
+        st.session_state.answers[qkey] = options_map[qkey][correct_idx]
+
 
     submitted = st.form_submit_button("Submit Exam & Show Results")
 
