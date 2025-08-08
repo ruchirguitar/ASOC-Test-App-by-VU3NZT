@@ -122,13 +122,17 @@ with st.form("exam_form"):
 
 # ---- EVALUATE & SHOW RESULTS ----
 if submitted:
-    # ---- CHECK FOR UNANSWERED ----
+        # ---- CHECK FOR UNANSWERED ----
     unanswered_A = [f"A{i+1}" for i in range(len(sampleA)) if answers[f"A{i+1}"] is None]
     unanswered_B = [f"B{i+1}" for i in range(len(sampleB)) if answers[f"B{i+1}"] is None]
 
     if unanswered_A or unanswered_B:
-        st.warning(
-            "You have not answered: "
-            + (", ".join(unanswered_A) if unanswered_A else "")
-            + ("; " if unanswered_A and unanswered_B else "")
-            + (", ".join(unanswer
+        warning_msg = "You have not answered: "
+        if unanswered_A:
+            warning_msg += ", ".join(unanswered_A)
+        if unanswered_A and unanswered_B:
+            warning_msg += "; "
+        if unanswered_B:
+            warning_msg += ", ".join(unanswered_B)
+        st.warning(warning_msg)
+        st.stop()
