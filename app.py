@@ -46,8 +46,9 @@ sampleB = dfB.sample(n=nB, random_state=seed+1).reset_index(drop=True)
 
 st.info("Exam layout: Section A (Radio Theory) on the left, Section B (Radio Regulations) on the right.")
 
-# Store correct answers after shuffle
+# Store correct answers and shuffled options
 correct_answers_map = {}
+options_map = {}
 answers = {}
 
 with st.form("exam_form"):
@@ -59,7 +60,7 @@ with st.form("exam_form"):
             qkey = f"A{i+1}"
             st.markdown(f"**A{i+1}. {row['Question']}**")
 
-            # Prepare options
+            # Prepare options and shuffle
             opts = [
                 ("A", row['OptionA']),
                 ("B", row['OptionB']),
@@ -75,6 +76,8 @@ with st.form("exam_form"):
 
             # Display options with A) etc.
             display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
+            options_map[qkey] = display_opts  # store shuffled options
+
             answers[qkey] = st.radio(
                 "",
                 display_opts,
@@ -82,7 +85,7 @@ with st.form("exam_form"):
                 index=None if qkey not in answers else display_opts.index(answers[qkey]),
                 label_visibility="collapsed"
             )
-            st.markdown("&nbsp;", unsafe_allow_html=True)
+            st.markdown("&nbsp;", unsafe_allow_html=True)  # spacing after options
 
     with colB:
         st.header("Section B — Radio Regulations")
@@ -90,7 +93,7 @@ with st.form("exam_form"):
             qkey = f"B{i+1}"
             st.markdown(f"**B{i+1}. {row['Question']}**")
 
-            # Prepare options
+            # Prepare options and shuffle
             opts = [
                 ("A", row['OptionA']),
                 ("B", row['OptionB']),
@@ -106,6 +109,8 @@ with st.form("exam_form"):
 
             # Display options with A) etc.
             display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
+            options_map[qkey] = display_opts  # store shuffled options
+
             answers[qkey] = st.radio(
                 "",
                 display_opts,
@@ -117,15 +122,9 @@ with st.form("exam_form"):
 
     # ---- CHEAT MODE BUTTON ----
     if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
-        for i in range(len(sampleA)):
-            qkey = f"A{i+1}"
-            display_opts = st.session_state[f"A_radio_{i}"]
-            answers[qkey] = display_opts[correct_answers_map[qkey]]
-
-        for i in range(len(sampleB)):
-            qkey = f"B{i+1}"
-            display_opts = st.session_state[f"B_radio_{i}"]
-            answers[qkey] = display_opts[correct_answers_map[qkey]]
+        for qkey in options_map:
+            correct_idx = correct_answers_map[qkey]
+            answers[qkey] = options_map[qkey][correct_idx]
 
     submitted = st.form_submit_button("Submit Exam & Show Results")
 
@@ -153,14 +152,14 @@ if submitted:
         st.subheader("Section A Results")
         for i, row in sampleA.iterrows():
             qkey = f"A{i+1}"
-            picked_index = [opt for opt in range(4) if answers[qkey] == f"{chr(65+opt)}) {opts[opt][1]}" or answers[qkey] == display_opts[opt]][0]
+            picked_index = options_map[qkey].index(answers[qkey])
             is_correct = (picked_index == correct_answers_map[qkey])
             if is_correct:
                 correctA += 1
             st.markdown(
                 f"**A{i+1}.** {row['Question']}  \n"
                 f"Your answer: **{answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
-                f"**Correct:** {chr(65+correct_answers_map[qkey])}"
+                f"**Correct:** {options_map[qkey][correct_answers_map[qkey]]}"
             )
     percA = correctA / len(sampleA) * 100
 
@@ -169,14 +168,14 @@ if submitted:
         st.subheader("Section B Results")
         for i, row in sampleB.iterrows():
             qkey = f"B{i+1}"
-            picked_index = [opt for opt in range(4) if answers[qkey] == f"{chr(65+opt)}) {opts[opt][1]}" or answers[qkey] == display_opts[opt]][0]
+            picked_index = options_map[qkey].index(answers[qkey])
             is_correct = (picked_index == correct_answers_map[qkey])
             if is_correct:
                 correctB += 1
             st.markdown(
                 f"**B{i+1}.** {row['Question']}  \n"
                 f"Your answer: **{answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
-                f"**Correct:** {chr(65+correct_answers_map[qkey])}"
+                f"**Correct:** {options_map[qkey][correct_answers_map[qkey]]}"
             )
     percB = correctB / len(sampleB) * 100
 
