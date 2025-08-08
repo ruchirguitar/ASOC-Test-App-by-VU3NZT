@@ -56,9 +56,13 @@ with st.form("exam_form"):
         for i, row in sampleA.iterrows():
             qkey = f"A{i+1}"
             st.markdown(f"**A{i+1}. {row['Question']}**")
+            options = [f"A) {row['OptionA']}",
+                       f"B) {row['OptionB']}",
+                       f"C) {row['OptionC']}",
+                       f"D) {row['OptionD']}"]
             answers[qkey] = st.radio(
                 "",
-                (row['OptionA'], row['OptionB'], row['OptionC'], row['OptionD']),
+                options,
                 key=f"A_radio_{i}",
                 index=None
             )
@@ -68,9 +72,13 @@ with st.form("exam_form"):
         for i, row in sampleB.iterrows():
             qkey = f"B{i+1}"
             st.markdown(f"**B{i+1}. {row['Question']}**")
+            options = [f"A) {row['OptionA']}",
+                       f"B) {row['OptionB']}",
+                       f"C) {row['OptionC']}",
+                       f"D) {row['OptionD']}"]
             answers[qkey] = st.radio(
                 "",
-                (row['OptionA'], row['OptionB'], row['OptionC'], row['OptionD']),
+                options,
                 key=f"B_radio_{i}",
                 index=None
             )
@@ -92,59 +100,91 @@ if submitted:
         )
         st.stop()
 
-    # Helper: match picked text to option label
-    def opt_label_for_text(row, text):
-        if text == row['OptionA']: return "A"
-        if text == row['OptionB']: return "B"
-        if text == row['OptionC']: return "C"
-        if text == row['OptionD']: return "D"
-        return "?"
+    # Helper: match picked option string to option letter
+    def opt_label_from_choice(choice):
+        return choice.split(")")[0] if choice else "?"
 
-    # ---- SECTION A RESULTS ----
+    # ---- RESULTS SIDE-BY-SIDE ----
+    colA_res, colB_res = st.columns(2)
+
+    # Section A
     correctA = 0
-    st.subheader("Section A Results")
-    for i, row in sampleA.iterrows():
-        picked = answers[f"A{i+1}"]
-        picked_label = opt_label_for_text(row, picked)
-        is_correct = (picked_label == str(row['Answer']))
-        if is_correct:
-            correctA += 1
-        st.markdown(
-            f"**A{i+1}.** {row['Question']}  \n"
-            f"Your answer: **{picked_label or '—'}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
-            f"**Correct:** {row['Answer']}"
-        )
+    with colA_res:
+        st.subheader("Section A Results")
+        for i, row in sampleA.iterrows():
+            picked = answers[f"A{i+1}"]
+            picked_label = opt_label_from_choice(picked)
+            is_correct = (picked_label == str(row['Answer']))
+            if is_correct:
+                correctA += 1
+            st.markdown(
+                f"**A{i+1}.** {row['Question']}  \n"
+                f"Your answer: **{picked_label or '—'}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"**Correct:** {row['Answer']}"
+            )
     percA = correctA / len(sampleA) * 100
 
-    # ---- SECTION B RESULTS ----
+    # Section B
     correctB = 0
-    st.subheader("Section B Results")
-    for i, row in sampleB.iterrows():
-        picked = answers[f"B{i+1}"]
-        picked_label = opt_label_for_text(row, picked)
-        is_correct = (picked_label == str(row['Answer']))
-        if is_correct:
-            correctB += 1
-        st.markdown(
-            f"**B{i+1}.** {row['Question']}  \n"
-            f"Your answer: **{picked_label or '—'}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
-            f"**Correct:** {row['Answer']}"
-        )
+    with colB_res:
+        st.subheader("Section B Results")
+        for i, row in sampleB.iterrows():
+            picked = answers[f"B{i+1}"]
+            picked_label = opt_label_from_choice(picked)
+            is_correct = (picked_label == str(row['Answer']))
+            if is_correct:
+                correctB += 1
+            st.markdown(
+                f"**B{i+1}.** {row['Question']}  \n"
+                f"Your answer: **{picked_label or '—'}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"**Correct:** {row['Answer']}"
+            )
     percB = correctB / len(sampleB) * 100
 
-    # ---- SUMMARY ----
+    # ---- GRAPHICAL SUMMARY ----
     st.markdown("---")
     st.header("Summary")
-    st.write(f"Section A: {correctA} / {len(sampleA)}  ({percA:.1f}%)  — {'PASS' if percA>=40 else 'FAIL'}")
-    st.write(f"Section B: {correctB} / {len(sampleB)}  ({percB:.1f}%)  — {'PASS' if percB>=40 else 'FAIL'}")
+
+    def custom_progress(label, value, pass_mark=40):
+        """
+        value = percentage (0-100)
+        pass_mark = threshold to pass (percentage)
+        """
+        bar_html = f"""
+        <div style="margin-bottom: 10px;">
+            <div style="font-weight: bold;">{label}: {value:.1f}%</div>
+            <div style="position: relative; background-color: #ddd; height: 24px; border-radius: 12px; overflow: hidden;">
+                <div style="width: {value}%; background-color: {'#4caf50' if value >= pass_mark else '#f44336'}; height: 100%;"></div>
+                <div style="position: absolute; left: {pass_mark}%; top: 0; bottom: 0; border-left: 2px dashed red;"></div>
+                <div style="position: absolute; width: 100%; text-align: center; line-height: 24px; font-weight: bold; color: black;">
+                    {value:.1f}%
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(bar_html, unsafe_allow_html=True)
+
+    # Section A
+    custom_progress(f"Section A — {correctA}/{len(sampleA)}", percA)
+    if percA < 40:
+        st.error("❌ FAIL — Need at least 40% in Section A")
+    else:
+        st.success("✅ PASS in Section A")
+
+    # Section B
+    custom_progress(f"Section B — {correctB}/{len(sampleB)}", percB)
+    if percB < 40:
+        st.error("❌ FAIL — Need at least 40% in Section B")
+    else:
+        st.success("✅ PASS in Section B")
+
+    # Overall
     total_correct = correctA + correctB
     total_questions = len(sampleA) + len(sampleB)
     total_perc = total_correct / total_questions * 100
-    st.write(f"Overall: {total_correct} / {total_questions}  ({total_perc:.1f}%)")
+    custom_progress(f"Overall — {total_correct}/{total_questions}", total_perc)
 
     if percA >= 40 and percB >= 40:
-        st.success("Congratulations — you passed the per-section pass criteria!")
+        st.success("🎉 Congratulations — You passed the ASOC mock test!")
     else:
-        st.error("You did not meet the per-section pass criteria. At least 40% is required in each section.")
-
-    st.caption("Question bank maintained in sectionA_1000.xlsx and sectionB_1000.xlsx in the app folder. Edit them to change/add questions.")
+        st.error("⚠ You did not meet the per-section pass criteria.")
