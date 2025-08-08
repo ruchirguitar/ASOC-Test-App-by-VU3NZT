@@ -1,12 +1,12 @@
-# app.py
 import streamlit as st
 import pandas as pd
 import random
 from pathlib import Path
 
+# --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="GIAR ASOC Mock Test", layout="wide")
 
-# ---- HEADER WITH LOGO AND CREDITS ----
+# --- HEADER SECTION ---
 logo_path = "logo_color_new_small.png"
 col1, col2 = st.columns([1, 5])
 with col1:
@@ -17,139 +17,187 @@ with col2:
 
 st.markdown("---")
 
-# ---- LOAD QUESTION BANKS ----
+# --- DATA LOADING ---
 sectionA_file = Path("sectionA_1000.xlsx")
 sectionB_file = Path("sectionB_1000.xlsx")
+try:
+    dfA = pd.read_excel(sectionA_file)
+    dfB = pd.read_excel(sectionB_file)
+except FileNotFoundError:
+    st.error("Error: The question files (sectionA_1000.xlsx or sectionB_1000.xlsx) were not found.")
+    st.stop()
 
-dfA = pd.read_excel(sectionA_file)
-dfB = pd.read_excel(sectionB_file)
+# --- SESSION STATE MANAGEMENT ---
+if "answers" not in st.session_state:
+    st.session_state.answers = {}
+if "seed" not in st.session_state:
+    st.session_state.seed = random.randint(1, 10**9)
 
-# ---- SELECT GRADE ----
-grade = st.selectbox(
-    "Select Grade",
-    ["Restricted (25 A + 25 B)", "General (50 A + 50 B)"]
-)
+# --- USER INPUTS: GRADE SELECTION ---
+grade = st.selectbox("Select Grade", ["Restricted (25 A + 25 B)", "General (50 A + 50 B)"])
 if "Restricted" in grade:
     nA, nB = 25, 25
 else:
     nA, nB = 50, 50
 
-# ---- RANDOM SELECTION ----
-seed = st.session_state.get("seed", None)
-if seed is None:
-    seed = random.randint(1, 10**9)
-    st.session_state["seed"] = seed
-random.seed(seed)
+# --- RANDOM QUESTION SELECTION ---
+random.seed(st.session_state.seed)
+sampleA = dfA.sample(n=nA, random_state=st.session_state.seed).reset_index(drop=True)
+sampleB = dfB.sample(n=nB, random_state=st.session_state.seed + 1).reset_index(drop=True)
 
-sampleA = dfA.sample(n=nA, random_state=seed).reset_index(drop=True)
-sampleB = dfB.sample(n=nB, random_state=seed+1).reset_index(drop=True)
+# --- PRE-BUILD OPTIONS AND CORRECT ANSWERS MAPS ---
+options_map = {}
+correct_answers_map = {}
 
-st.info("Exam layout: Section A (Radio Theory) on the left, Section B (Radio Regulations) on the right.")
+# Build Section A questions and options
+for i, row in sampleA.iterrows():
+    qkey = f"A{i+1}"
+    opts = [
+        ("A", row['OptionA']),
+        ("B", row['OptionB']),
+        ("C", row['OptionC']),
+        ("D", row['OptionD'])
+    ]
+    shuffled_opts = opts[:]
+    random.shuffle(shuffled_opts)
+    
+    for idx, (label, text) in enumerate(shuffled_opts):
+        if label == row['Answer']:
+            correct_answers_map[qkey] = idx
+            break
+            
+    display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(shuffled_opts)]
+    options_map[qkey] = display_opts
 
-# ---- DISPLAY QUESTIONS SIDE-BY-SIDE ----
-answers = {}
-with st.form("exam_form"):
-    colA, colB = st.columns(2)
+# Build Section B questions and options
+for i, row in sampleB.iterrows():
+    qkey = f"B{i+1}"
+    opts = [
+        ("A", row['OptionA']),
+        ("B", row['OptionB']),
+        ("C", row['OptionC']),
+        ("D", row['OptionD'])
+    ]
+    shuffled_opts = opts[:]
+    random.shuffle(shuffled_opts)
 
-    with colA:
-        st.header("Section A — Radio Theory")
-        for i, row in sampleA.iterrows():
-            qkey = f"A{i+1}"
-            st.markdown(f"**A{i+1}. {row['Question']}**")
-            options = [f"A) {row['OptionA']}",
-                       f"B) {row['OptionB']}",
-                       f"C) {row['OptionC']}",
-                       f"D) {row['OptionD']}"]
-            answers[qkey] = st.radio(
-                "",
-                options,
-                key=f"A_radio_{i}",
-                index=None
-            )
+    for idx, (label, text) in enumerate(shuffled_opts):
+        if label == row['Answer']:
+            correct_answers_map[qkey] = idx
+            break
 
-    with colB:
-        st.header("Section B — Radio Regulations")
-        for i, row in sampleB.iterrows():
-            qkey = f"B{i+1}"
-            st.markdown(f"**B{i+1}. {row['Question']}**")
-            options = [f"A) {row['OptionA']}",
-                       f"B) {row['OptionB']}",
-                       f"C) {row['OptionC']}",
-                       f"D) {row['OptionD']}"]
-            answers[qkey] = st.radio(
-                "",
-                options,
-                key=f"B_radio_{i}",
-                index=None
-            )
+    display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(shuffled_opts)]
+    options_map[qkey] = display_opts
 
-    submitted = st.form_submit_button("Submit Exam & Show Results")
+# --- CHEAT MODE BUTTON (REVISED) ---
+# This button now directly updates the session state and forces a full rerun.
+if st.button("💡 Cheat Mode (Fill All Correct Answers)", key="cheat_button"):
+    st.success("Cheat Mode activated — all correct answers filled!")
+    for qkey, correct_idx in correct_answers_map.items():
+        st.session_state.answers[qkey] = options_map[qkey][correct_idx]
+    st.rerun()
 
-# ---- EVALUATE & SHOW RESULTS ----
+# --- EXAM QUESTIONS DISPLAY (FORM REMOVED) ---
+colA, colB = st.columns(2)
+
+with colA:
+    st.header("Section A — Radio Theory")
+    for i, row in sampleA.iterrows():
+        qkey = f"A{i+1}"
+        st.markdown(f"**A{i+1}.** {row['Question']}")
+        display_opts = options_map[qkey]
+
+        user_answer = st.session_state.answers.get(qkey)
+        index_val = display_opts.index(user_answer) if user_answer in display_opts else None
+
+        choice = st.radio(
+            "",
+            display_opts,
+            key=f"A_radio_{i}",
+            index=index_val,
+            label_visibility="collapsed"
+        )
+        st.session_state.answers[qkey] = choice
+        st.write("")
+
+with colB:
+    st.header("Section B — Radio Regulations")
+    for i, row in sampleB.iterrows():
+        qkey = f"B{i+1}"
+        st.markdown(f"**B{i+1}.** {row['Question']}")
+        display_opts = options_map[qkey]
+
+        user_answer = st.session_state.answers.get(qkey)
+        index_val = display_opts.index(user_answer) if user_answer in display_opts else None
+        
+        choice = st.radio(
+            "",
+            display_opts,
+            key=f"B_radio_{i}",
+            index=index_val,
+            label_visibility="collapsed"
+        )
+        st.session_state.answers[qkey] = choice
+        st.write("")
+
+# --- SUBMIT BUTTON (OUTSIDE OF FORM) ---
+submitted = st.button("Submit Exam & Show Results", key="submit_button")
+
+
+# --- RESULTS SECTION ---
 if submitted:
-    # ---- CHECK FOR UNANSWERED ----
-    unanswered_A = [f"A{i+1}" for i in range(len(sampleA)) if answers[f"A{i+1}"] is None]
-    unanswered_B = [f"B{i+1}" for i in range(len(sampleB)) if answers[f"B{i+1}"] is None]
+    unanswered_A = [f"A{i+1}" for i in range(len(sampleA)) if not st.session_state.answers.get(f"A{i+1}")]
+    unanswered_B = [f"B{i+1}" for i in range(len(sampleB)) if not st.session_state.answers.get(f"B{i+1}")]
 
     if unanswered_A or unanswered_B:
-        st.warning(
-            "You have not answered: "
-            + (", ".join(unanswered_A) if unanswered_A else "")
-            + ("; " if unanswered_A and unanswered_B else "")
-            + (", ".join(unanswered_B) if unanswered_B else "")
-        )
+        warning_msg = "You have not answered: "
+        if unanswered_A:
+            warning_msg += ", ".join(unanswered_A)
+        if unanswered_A and unanswered_B:
+            warning_msg += "; "
+        if unanswered_B:
+            warning_msg += ", ".join(unanswered_B)
+        st.warning(warning_msg)
         st.stop()
 
-    # Helper: match picked option string to option letter
-    def opt_label_from_choice(choice):
-        return choice.split(")")[0] if choice else "?"
-
-    # ---- RESULTS SIDE-BY-SIDE ----
     colA_res, colB_res = st.columns(2)
 
-    # Section A
     correctA = 0
     with colA_res:
         st.subheader("Section A Results")
         for i, row in sampleA.iterrows():
-            picked = answers[f"A{i+1}"]
-            picked_label = opt_label_from_choice(picked)
-            is_correct = (picked_label == str(row['Answer']))
+            qkey = f"A{i+1}"
+            picked_index = options_map[qkey].index(st.session_state.answers[qkey])
+            is_correct = (picked_index == correct_answers_map[qkey])
             if is_correct:
                 correctA += 1
             st.markdown(
                 f"**A{i+1}.** {row['Question']}  \n"
-                f"Your answer: **{picked_label or '—'}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
-                f"**Correct:** {row['Answer']}"
+                f"Your answer: **{st.session_state.answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"**Correct:** {options_map[qkey][correct_answers_map[qkey]]}"
             )
     percA = correctA / len(sampleA) * 100
 
-    # Section B
     correctB = 0
     with colB_res:
         st.subheader("Section B Results")
         for i, row in sampleB.iterrows():
-            picked = answers[f"B{i+1}"]
-            picked_label = opt_label_from_choice(picked)
-            is_correct = (picked_label == str(row['Answer']))
+            qkey = f"B{i+1}"
+            picked_index = options_map[qkey].index(st.session_state.answers[qkey])
+            is_correct = (picked_index == correct_answers_map[qkey])
             if is_correct:
                 correctB += 1
             st.markdown(
                 f"**B{i+1}.** {row['Question']}  \n"
-                f"Your answer: **{picked_label or '—'}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
-                f"**Correct:** {row['Answer']}"
+                f"Your answer: **{st.session_state.answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"**Correct:** {options_map[qkey][correct_answers_map[qkey]]}"
             )
     percB = correctB / len(sampleB) * 100
 
-    # ---- GRAPHICAL SUMMARY ----
     st.markdown("---")
     st.header("Summary")
 
     def custom_progress(label, value, pass_mark=40):
-        """
-        value = percentage (0-100)
-        pass_mark = threshold to pass (percentage)
-        """
         bar_html = f"""
         <div style="margin-bottom: 10px;">
             <div style="font-weight: bold;">{label}: {value:.1f}%</div>
@@ -164,27 +212,19 @@ if submitted:
         """
         st.markdown(bar_html, unsafe_allow_html=True)
 
-    # Section A
     custom_progress(f"Section A — {correctA}/{len(sampleA)}", percA)
-    if percA < 40:
-        st.error("❌ FAIL — Need at least 40% in Section A")
-    else:
-        st.success("✅ PASS in Section A")
+    st.success("✅ PASS in Section A" if percA >= 40 else "❌ FAIL — Need at least 40% in Section A")
 
-    # Section B
     custom_progress(f"Section B — {correctB}/{len(sampleB)}", percB)
-    if percB < 40:
-        st.error("❌ FAIL — Need at least 40% in Section B")
-    else:
-        st.success("✅ PASS in Section B")
+    st.success("✅ PASS in Section B" if percB >= 40 else "❌ FAIL — Need at least 40% in Section B")
 
-    # Overall
     total_correct = correctA + correctB
     total_questions = len(sampleA) + len(sampleB)
     total_perc = total_correct / total_questions * 100
     custom_progress(f"Overall — {total_correct}/{total_questions}", total_perc)
 
     if percA >= 40 and percB >= 40:
+        st.balloons()
         st.success("🎉 Congratulations — You passed the ASOC mock test!")
     else:
         st.error("⚠ You did not meet the per-section pass criteria.")
