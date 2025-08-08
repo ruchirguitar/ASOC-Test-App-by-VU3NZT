@@ -19,7 +19,6 @@ st.markdown("---")
 # ---- LOAD DATA ----
 sectionA_file = Path("sectionA_1000.xlsx")
 sectionB_file = Path("sectionB_1000.xlsx")
-
 dfA = pd.read_excel(sectionA_file)
 dfB = pd.read_excel(sectionB_file)
 
@@ -42,13 +41,50 @@ random.seed(seed)
 sampleA = dfA.sample(n=nA, random_state=seed).reset_index(drop=True)
 sampleB = dfB.sample(n=nB, random_state=seed+1).reset_index(drop=True)
 
-# ---- MAPPINGS ----
-correct_answers_map = {}
+# ---- PRE-BUILD OPTIONS MAPS ----
 options_map = {}
+correct_answers_map = {}
 
-st.info("Exam layout: Section A (Radio Theory) on the left, Section B (Radio Regulations) on the right.")
+# Build Section A
+for i, row in sampleA.iterrows():
+    qkey = f"A{i+1}"
+    opts = [
+        ("A", row['OptionA']),
+        ("B", row['OptionB']),
+        ("C", row['OptionC']),
+        ("D", row['OptionD'])
+    ]
+    random.shuffle(opts)
+    for new_label, opt_text in opts:
+        if new_label == row['Answer']:
+            correct_answers_map[qkey] = opts.index((new_label, opt_text))
+    display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
+    options_map[qkey] = display_opts
 
-# ---- FORM ----
+# Build Section B
+for i, row in sampleB.iterrows():
+    qkey = f"B{i+1}"
+    opts = [
+        ("A", row['OptionA']),
+        ("B", row['OptionB']),
+        ("C", row['OptionC']),
+        ("D", row['OptionD'])
+    ]
+    random.shuffle(opts)
+    for new_label, opt_text in opts:
+        if new_label == row['Answer']:
+            correct_answers_map[qkey] = opts.index((new_label, opt_text))
+    display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
+    options_map[qkey] = display_opts
+
+# ---- CHEAT MODE OUTSIDE FORM ----
+if st.button("💡 Cheat Mode (Fill All Correct Answers)"):
+    for qkey in options_map:
+        correct_idx = correct_answers_map[qkey]
+        st.session_state.answers[qkey] = options_map[qkey][correct_idx]
+    st.success("Cheat Mode activated — all correct answers filled!")
+
+# ---- EXAM FORM ----
 with st.form("exam_form"):
     colA, colB = st.columns(2)
 
@@ -57,24 +93,8 @@ with st.form("exam_form"):
         for i, row in sampleA.iterrows():
             qkey = f"A{i+1}"
             st.markdown(f"**A{i+1}. {row['Question']}**")
-
-            opts = [
-                ("A", row['OptionA']),
-                ("B", row['OptionB']),
-                ("C", row['OptionC']),
-                ("D", row['OptionD'])
-            ]
-            random.shuffle(opts)
-
-            for new_label, opt_text in opts:
-                if new_label == row['Answer']:
-                    correct_answers_map[qkey] = opts.index((new_label, opt_text))
-
-            display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
-            options_map[qkey] = display_opts
-
-            answers_val = st.session_state.answers.get(qkey, None)
-            index_val = display_opts.index(answers_val) if answers_val in display_opts else None
+            display_opts = options_map[qkey]
+            index_val = display_opts.index(st.session_state.answers[qkey]) if qkey in st.session_state.answers else None
             choice = st.radio(
                 "",
                 display_opts,
@@ -83,31 +103,15 @@ with st.form("exam_form"):
                 label_visibility="collapsed"
             )
             st.session_state.answers[qkey] = choice
-            st.write("")  # no extra big gap
+            st.write("")
 
     with colB:
         st.header("Section B — Radio Regulations")
         for i, row in sampleB.iterrows():
             qkey = f"B{i+1}"
             st.markdown(f"**B{i+1}. {row['Question']}**")
-
-            opts = [
-                ("A", row['OptionA']),
-                ("B", row['OptionB']),
-                ("C", row['OptionC']),
-                ("D", row['OptionD'])
-            ]
-            random.shuffle(opts)
-
-            for new_label, opt_text in opts:
-                if new_label == row['Answer']:
-                    correct_answers_map[qkey] = opts.index((new_label, opt_text))
-
-            display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
-            options_map[qkey] = display_opts
-
-            answers_val = st.session_state.answers.get(qkey, None)
-            index_val = display_opts.index(answers_val) if answers_val in display_opts else None
+            display_opts = options_map[qkey]
+            index_val = display_opts.index(st.session_state.answers[qkey]) if qkey in st.session_state.answers else None
             choice = st.radio(
                 "",
                 display_opts,
@@ -117,12 +121,6 @@ with st.form("exam_form"):
             )
             st.session_state.answers[qkey] = choice
             st.write("")
-
-    # ---- CHEAT MODE ----
-    if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
-        for qkey in options_map:
-            correct_idx = correct_answers_map[qkey]
-            st.session_state.answers[qkey] = options_map[qkey][correct_idx]
 
     submitted = st.form_submit_button("Submit Exam & Show Results")
 
