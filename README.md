@@ -19,6 +19,15 @@ This is a web-based mock test application designed to help aspiring amateur radi
 
 -----
 
+### 🙏 Acknowledgements
+
+This project and my journey into amateur radio would not be possible without the guidance and support from the following individuals and organization:
+
+  * **GIAR - Gujarat Institute of Amateur Radio (www.giar.org):** For fostering a community of learners and for providing the resources to pursue my passion for HAM radio.
+  * **VU2JGI Dr. Jagdish Pandya & VU2CPV Pravin Valera:** My sincere thanks to my mentors for their invaluable guidance and encouragement throughout my HAM radio training.
+
+-----
+
 ### 🚀 How to Run the App
 
 This project is a simple Streamlit application. To run it locally, follow these steps.
@@ -69,15 +78,6 @@ This project is a major milestone for me\! It represents my first attempt at bui
   * **GitHub:** Version control, creating a repository, and writing a good README.
 
 A big thank you to the help of a large language model, which was an invaluable assistant throughout the coding process, helping me debug issues and improve the code. This project is a testament to what can be achieved with the right tools and a passion for learning.
-
------
-
-### 🙏 Acknowledgements
-
-This project and my journey into amateur radio would not be possible without the guidance and support from the following individuals and organization:
-
-  * **GIAR - Gujarat Institute of Amateur Radio (www.giar.org):** For fostering a community of learners and for providing the resources to pursue my passion for HAM radio.
-  * **VU2JGI Dr. Jagdish Pandya & VU2CPV Pravin Valera:** My sincere thanks to my mentors for their invaluable guidance and encouragement throughout my HAM radio training.
 
 -----
 
