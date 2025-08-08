@@ -124,7 +124,7 @@ with st.form("exam_form"):
         for qkey in options_map:
             correct_idx = correct_answers_map[qkey]
             st.session_state.answers[qkey] = options_map[qkey][correct_idx]
-        st.experimental_rerun()
+        st.rerun()
 
     submitted = st.form_submit_button("Submit Exam & Show Results")
 
