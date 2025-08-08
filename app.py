@@ -48,9 +48,8 @@ st.info("Exam layout: Section A (Radio Theory) on the left, Section B (Radio Reg
 
 # Store correct answers after shuffle
 correct_answers_map = {}
-
-# ---- DISPLAY QUESTIONS SIDE-BY-SIDE ----
 answers = {}
+
 with st.form("exam_form"):
     colA, colB = st.columns(2)
 
@@ -60,7 +59,7 @@ with st.form("exam_form"):
             qkey = f"A{i+1}"
             st.markdown(f"**A{i+1}. {row['Question']}**")
 
-            # Prepare options with labels
+            # Prepare options
             opts = [
                 ("A", row['OptionA']),
                 ("B", row['OptionB']),
@@ -69,22 +68,21 @@ with st.form("exam_form"):
             ]
             random.shuffle(opts)
 
-            # Store correct answer letter after shuffle
+            # Store correct answer index
             for new_label, opt_text in opts:
                 if new_label == row['Answer']:
                     correct_answers_map[qkey] = opts.index((new_label, opt_text))
 
-            # Create options with A) etc.
+            # Display options with A) etc.
             display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
-
             answers[qkey] = st.radio(
                 "",
                 display_opts,
                 key=f"A_radio_{i}",
-                index=None,
+                index=None if qkey not in answers else display_opts.index(answers[qkey]),
                 label_visibility="collapsed"
             )
-            st.markdown("&nbsp;", unsafe_allow_html=True)  # One blank line after options
+            st.markdown("&nbsp;", unsafe_allow_html=True)
 
     with colB:
         st.header("Section B — Radio Regulations")
@@ -92,7 +90,7 @@ with st.form("exam_form"):
             qkey = f"B{i+1}"
             st.markdown(f"**B{i+1}. {row['Question']}**")
 
-            # Prepare options with labels
+            # Prepare options
             opts = [
                 ("A", row['OptionA']),
                 ("B", row['OptionB']),
@@ -101,28 +99,39 @@ with st.form("exam_form"):
             ]
             random.shuffle(opts)
 
-            # Store correct answer letter after shuffle
+            # Store correct answer index
             for new_label, opt_text in opts:
                 if new_label == row['Answer']:
                     correct_answers_map[qkey] = opts.index((new_label, opt_text))
 
-            # Create options with A) etc.
+            # Display options with A) etc.
             display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
-
             answers[qkey] = st.radio(
                 "",
                 display_opts,
                 key=f"B_radio_{i}",
-                index=None,
+                index=None if qkey not in answers else display_opts.index(answers[qkey]),
                 label_visibility="collapsed"
             )
-            st.markdown("&nbsp;", unsafe_allow_html=True)  # One blank line after options
+            st.markdown("&nbsp;", unsafe_allow_html=True)
+
+    # ---- CHEAT MODE BUTTON ----
+    if st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)"):
+        for i in range(len(sampleA)):
+            qkey = f"A{i+1}"
+            display_opts = st.session_state[f"A_radio_{i}"]
+            answers[qkey] = display_opts[correct_answers_map[qkey]]
+
+        for i in range(len(sampleB)):
+            qkey = f"B{i+1}"
+            display_opts = st.session_state[f"B_radio_{i}"]
+            answers[qkey] = display_opts[correct_answers_map[qkey]]
 
     submitted = st.form_submit_button("Submit Exam & Show Results")
 
 # ---- EVALUATE & SHOW RESULTS ----
 if submitted:
-        # ---- CHECK FOR UNANSWERED ----
+    # ---- CHECK FOR UNANSWERED ----
     unanswered_A = [f"A{i+1}" for i in range(len(sampleA)) if answers[f"A{i+1}"] is None]
     unanswered_B = [f"B{i+1}" for i in range(len(sampleB)) if answers[f"B{i+1}"] is None]
 
@@ -136,3 +145,72 @@ if submitted:
             warning_msg += ", ".join(unanswered_B)
         st.warning(warning_msg)
         st.stop()
+
+    colA_res, colB_res = st.columns(2)
+
+    correctA = 0
+    with colA_res:
+        st.subheader("Section A Results")
+        for i, row in sampleA.iterrows():
+            qkey = f"A{i+1}"
+            picked_index = [opt for opt in range(4) if answers[qkey] == f"{chr(65+opt)}) {opts[opt][1]}" or answers[qkey] == display_opts[opt]][0]
+            is_correct = (picked_index == correct_answers_map[qkey])
+            if is_correct:
+                correctA += 1
+            st.markdown(
+                f"**A{i+1}.** {row['Question']}  \n"
+                f"Your answer: **{answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"**Correct:** {chr(65+correct_answers_map[qkey])}"
+            )
+    percA = correctA / len(sampleA) * 100
+
+    correctB = 0
+    with colB_res:
+        st.subheader("Section B Results")
+        for i, row in sampleB.iterrows():
+            qkey = f"B{i+1}"
+            picked_index = [opt for opt in range(4) if answers[qkey] == f"{chr(65+opt)}) {opts[opt][1]}" or answers[qkey] == display_opts[opt]][0]
+            is_correct = (picked_index == correct_answers_map[qkey])
+            if is_correct:
+                correctB += 1
+            st.markdown(
+                f"**B{i+1}.** {row['Question']}  \n"
+                f"Your answer: **{answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"**Correct:** {chr(65+correct_answers_map[qkey])}"
+            )
+    percB = correctB / len(sampleB) * 100
+
+    # ---- GRAPHICAL SUMMARY ----
+    st.markdown("---")
+    st.header("Summary")
+
+    def custom_progress(label, value, pass_mark=40):
+        bar_html = f"""
+        <div style="margin-bottom: 10px;">
+            <div style="font-weight: bold;">{label}: {value:.1f}%</div>
+            <div style="position: relative; background-color: #ddd; height: 24px; border-radius: 12px; overflow: hidden;">
+                <div style="width: {value}%; background-color: {'#4caf50' if value >= pass_mark else '#f44336'}; height: 100%;"></div>
+                <div style="position: absolute; left: {pass_mark}%; top: 0; bottom: 0; border-left: 2px dashed red;"></div>
+                <div style="position: absolute; width: 100%; text-align: center; line-height: 24px; font-weight: bold; color: black;">
+                    {value:.1f}%
+                </div>
+            </div>
+        </div>
+        """
+        st.markdown(bar_html, unsafe_allow_html=True)
+
+    custom_progress(f"Section A — {correctA}/{len(sampleA)}", percA)
+    st.success("✅ PASS in Section A" if percA >= 40 else "❌ FAIL — Need at least 40% in Section A")
+
+    custom_progress(f"Section B — {correctB}/{len(sampleB)}", percB)
+    st.success("✅ PASS in Section B" if percB >= 40 else "❌ FAIL — Need at least 40% in Section B")
+
+    total_correct = correctA + correctB
+    total_questions = len(sampleA) + len(sampleB)
+    total_perc = total_correct / total_questions * 100
+    custom_progress(f"Overall — {total_correct}/{total_questions}", total_perc)
+
+    if percA >= 40 and percB >= 40:
+        st.success("🎉 Congratulations — You passed the ASOC mock test!")
+    else:
+        st.error("⚠ You did not meet the per-section pass criteria.")
