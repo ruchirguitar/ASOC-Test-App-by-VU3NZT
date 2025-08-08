@@ -1,7 +1,3 @@
-This is a great README draft for your GitHub page. I've tailored it to your specific repository and included all the details you requested, including the acknowledgements and your callsign. You can copy and paste this directly into a `README.md` file in your repository.
-
------
-
 # 🇮🇳 ASOC Mock Test App by VU3NZT
 
 This is a web-based mock test application designed to help aspiring amateur radio operators in India prepare for the **Amateur Station Operator's Certificate (ASOC)** examination. Built with **Streamlit**, this app offers a user-friendly interface for practicing questions from both Section A (Radio Theory) and Section B (Radio Regulations).
