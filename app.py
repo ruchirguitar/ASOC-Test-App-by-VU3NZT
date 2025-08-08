@@ -12,15 +12,15 @@ with col1:
     st.image(logo_path, width=120)
 with col2:
     st.title("Gujarat Institute of Amateur Radio — ASOC Mock Test")
-    st.caption("www.giar.org — App by Ruchir Purohit VU3NZT")
+    st.caption("www.giar.org — App by Ruchir Purohit")
 
 st.markdown("---")
 
 # ---- LOAD DATA ----
 sectionA_file = Path("sectionA_1000.xlsx")
 sectionB_file = Path("sectionB_1000.xlsx")
-dfA = pd.read_excel(sectionA_file)
-dfB = pd.read_excel(sectionB_file)
+dfA = pd.read_excel(sectionA_file).drop_duplicates(subset=['Question'])
+dfB = pd.read_excel(sectionB_file).drop_duplicates(subset=['Question'])
 
 # ---- SESSION STATE ----
 if "answers" not in st.session_state:
@@ -122,7 +122,8 @@ with st.form("exam_form"):
             st.session_state.answers[qkey] = choice
             st.write("")
 
-    submitted = st.form_submit_button("Submit Exam & Show Results")
+    # Submit button must be inside the form
+    submitted = st.form_submit_button("✅ Submit Exam & Show Results", type="primary")
 
 # ---- RESULTS ----
 if submitted:
