@@ -12,7 +12,7 @@ with col1:
     st.image(logo_path, width=120)
 with col2:
     st.title("Gujarat Institute of Amateur Radio — ASOC Mock Test")
-    st.caption("www.giar.org — App by Ruchir Purohit")
+    st.caption("www.giar.org — App by Ruchir Purohit VU3NZT")
 
 st.markdown("---")
 
@@ -85,20 +85,44 @@ if st.button("💡 Cheat Mode (Fill All Correct Answers)"):
     st.rerun()
 
 # ---- EXAM FORM ----
-    # Buttons Row
-    col_btn1, col_btn2 = st.columns([3, 1])
-    with col_btn1:
-        submitted = st.form_submit_button("Submit Exam & Show Results")
-    with col_btn2:
-        cheat_clicked = st.form_submit_button("💡 Cheat Mode (Fill All Correct Answers)")
+with st.form("exam_form"):
+    colA, colB = st.columns(2)
 
-# After form ends
-if cheat_clicked:
-    for qkey in options_map:
-        correct_idx = correct_answers_map[qkey]
-        st.session_state.answers[qkey] = options_map[qkey][correct_idx]
-    st.rerun()
+    with colA:
+        st.header("Section A — Radio Theory")
+        for i, row in sampleA.iterrows():
+            qkey = f"A{i+1}"
+            st.markdown(f"**A{i+1}. {row['Question']}**")
+            display_opts = options_map[qkey]
+            index_val = display_opts.index(st.session_state.answers[qkey]) if qkey in st.session_state.answers else None
+            choice = st.radio(
+                "",
+                display_opts,
+                key=f"A_radio_{i}",
+                index=index_val,
+                label_visibility="collapsed"
+            )
+            st.session_state.answers[qkey] = choice
+            st.write("")
 
+    with colB:
+        st.header("Section B — Radio Regulations")
+        for i, row in sampleB.iterrows():
+            qkey = f"B{i+1}"
+            st.markdown(f"**B{i+1}. {row['Question']}**")
+            display_opts = options_map[qkey]
+            index_val = display_opts.index(st.session_state.answers[qkey]) if qkey in st.session_state.answers else None
+            choice = st.radio(
+                "",
+                display_opts,
+                key=f"B_radio_{i}",
+                index=index_val,
+                label_visibility="collapsed"
+            )
+            st.session_state.answers[qkey] = choice
+            st.write("")
+
+    submitted = st.form_submit_button("Submit Exam & Show Results")
 
 # ---- RESULTS ----
 if submitted:
