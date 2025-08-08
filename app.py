@@ -77,12 +77,12 @@ for i, row in sampleB.iterrows():
     display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(opts)]
     options_map[qkey] = display_opts
 
-# ---- CHEAT MODE OUTSIDE FORM ----
+# ---- CHEAT MODE ----
 if st.button("💡 Cheat Mode (Fill All Correct Answers)"):
     for qkey in options_map:
         correct_idx = correct_answers_map[qkey]
         st.session_state.answers[qkey] = options_map[qkey][correct_idx]
-    st.success("Cheat Mode activated — all correct answers filled!")
+    st.rerun()
 
 # ---- EXAM FORM ----
 with st.form("exam_form"):
