@@ -89,13 +89,19 @@ for i, row in sampleB.iterrows():
     display_opts = [f"{chr(65+j)}) {opt_text}" for j, (_, opt_text) in enumerate(shuffled_opts)]
     options_map[qkey] = display_opts
 
-# --- CHEAT MODE BUTTON (REVISED) ---
-# This button now directly updates the session state and forces a full rerun.
+# --- CHEAT MODE BUTTON (PERSISTENT MESSAGE) ---
+if "cheat_mode" not in st.session_state:
+    st.session_state.cheat_mode = False
+
 if st.button("💡 Cheat Mode (Fill All Correct Answers)", key="cheat_button"):
-    st.success("Cheat Mode activated — all correct answers filled!")
     for qkey, correct_idx in correct_answers_map.items():
         st.session_state.answers[qkey] = options_map[qkey][correct_idx]
+    st.session_state.cheat_mode = True
     st.rerun()
+
+if st.session_state.cheat_mode:
+    st.success("💡 Cheat Mode activated — all correct answers filled!")
+
 
 # --- EXAM QUESTIONS DISPLAY (FORM REMOVED) ---
 colA, colB = st.columns(2)
