@@ -145,6 +145,7 @@ submitted = st.button("Submit Exam & Show Results", key="submit_button")
 
 
 # --- RESULTS SECTION ---
+# --- RESULTS SECTION ---
 if submitted:
     unanswered_A = [f"A{i+1}" for i in range(len(sampleA)) if not st.session_state.answers.get(f"A{i+1}")]
     unanswered_B = [f"B{i+1}" for i in range(len(sampleB)) if not st.session_state.answers.get(f"B{i+1}")]
@@ -164,34 +165,44 @@ if submitted:
 
     correctA = 0
     with colA_res:
-        st.subheader("Section A Results")
+        st.subheader("Section A — Incorrect Answers")
+        incorrect_found_A = False
         for i, row in sampleA.iterrows():
             qkey = f"A{i+1}"
             picked_index = options_map[qkey].index(st.session_state.answers[qkey])
             is_correct = (picked_index == correct_answers_map[qkey])
             if is_correct:
                 correctA += 1
+                continue  # Skip correct answers
+            incorrect_found_A = True
             st.markdown(
                 f"**A{i+1}.** {row['Question']}  \n"
-                f"Your answer: **{st.session_state.answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"Your answer: **{st.session_state.answers[qkey]}** — ❌ Incorrect  \n"
                 f"**Correct:** {options_map[qkey][correct_answers_map[qkey]]}"
             )
+        if not incorrect_found_A:
+            st.success("🎯 Perfect Score! No incorrect answer in this section!")
     percA = correctA / len(sampleA) * 100
 
     correctB = 0
     with colB_res:
-        st.subheader("Section B Results")
+        st.subheader("Section B — Incorrect Answers")
+        incorrect_found_B = False
         for i, row in sampleB.iterrows():
             qkey = f"B{i+1}"
             picked_index = options_map[qkey].index(st.session_state.answers[qkey])
             is_correct = (picked_index == correct_answers_map[qkey])
             if is_correct:
                 correctB += 1
+                continue  # Skip correct answers
+            incorrect_found_B = True
             st.markdown(
                 f"**B{i+1}.** {row['Question']}  \n"
-                f"Your answer: **{st.session_state.answers[qkey]}** — {'✅ Correct' if is_correct else '❌ Incorrect'}  \n"
+                f"Your answer: **{st.session_state.answers[qkey]}** — ❌ Incorrect  \n"
                 f"**Correct:** {options_map[qkey][correct_answers_map[qkey]]}"
             )
+        if not incorrect_found_B:
+            st.success("🎯 Perfect Score! No incorrect answer in this section!")
     percB = correctB / len(sampleB) * 100
 
     st.markdown("---")
