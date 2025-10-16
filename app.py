@@ -13,7 +13,7 @@ with col1:
     st.image(logo_path, width=120)
 with col2:
     st.title("Gujarat Institute of Amateur Radio — ASOC Mock Test")
-    st.caption("www.giar.org — App by Ruchir Purohit VU3NZT")
+    st.caption("www.giar.org — App by Ruchir Purohit VU22PR (ex. VU3NZT)")
 
 st.markdown("---")
 
